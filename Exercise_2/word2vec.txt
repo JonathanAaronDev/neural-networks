@@ -1,0 +1,166 @@
+#https://github.com/nitwmanish/An-Intuitive-Introduction-Of-Word2Vec-By-Building-A-Word2Vec-From-Scratch/blob/master/An-Intuitive-Introduction-Of-Word2Vec-By-Building-A-Word2Vec-From-Scratch.ipynb
+
+import numpy as np
+
+docs = ["I like watching movie", "I enjoy watching movie", "I like viewing movie", "I like hearing song"]
+
+#docs[0][0].split()
+
+# create a one-hot encoding vector
+
+from sklearn.feature_extraction.text import CountVectorizer
+vectorizer = CountVectorizer(min_df=0, token_pattern=r"\b\w+\b")
+vectorizer.fit(docs)
+print(vectorizer.vocabulary_)
+
+# encode document
+vector = vectorizer.transform(docs)
+# summarize encoded vector
+print("shape",vector.shape)
+print("type",type(vector))
+print("values",vector.toarray())
+
+# create the input and output dataset
+x = []
+y = []
+for i in range(len(docs)):
+    for j in range(len(docs[i].split())):
+        t_x = []
+        t_y = []
+        for k in range(4):
+            if(j==k):
+                t_y.append(docs[i].split()[k])
+                continue
+            else:
+                t_x.append(docs[i].split()[k])
+        x.append(t_x)
+        y.append(t_y)
+#x
+#y
+
+x2 = []
+y2 = []
+for i in range(len(x)):
+    x2.append(' '.join(x[i]))
+    y2.append(' '.join(y[i]))
+#x2
+#y2
+
+# transfor the input and output into vectors
+vector_x = vectorizer.transform(x2)
+vx = vector_x.toarray()
+
+vector_y = vectorizer.transform(y2)
+vy = vector_y.toarray()
+
+vocSize = len(vectorizer.vocabulary_)
+hidden_layer_size = 3
+
+from keras.models import Sequential
+from keras.layers import Dense, Embedding
+from keras.layers import LSTM , Bidirectional,Dropout
+from keras import backend as K
+from keras.layers import LeakyReLU
+from keras import regularizers
+from keras import backend
+
+backend.clear_session()
+
+model = Sequential()
+model.add(Dense(hidden_layer_size, activation='linear', input_shape=(vocSize,)))
+model.add(Dense(vocSize,activation='sigmoid'))
+model.summary()
+
+model.compile(loss='binary_crossentropy',optimizer='adam')
+#model.fit(vector_x, vector_y, epochs=1000, batch_size=4,verbose=1)
+model.fit(vx, vy, epochs=1000, batch_size=4,verbose=0)
+
+model.predict(vector_x)
+
+#[list(vectorizer.vocabulary_.keys())[0]]
+#vectorizer.transform([list(vectorizer.vocabulary_.keys())[1]]).toarray()
+
+#Extract the word vectors by fetching the intermediate layer values where the inputs are the vectors of each individual word.
+from keras.models import Model
+layer_name = 'dense'
+intermediate_layer_model = Model(inputs=model.input, outputs=model.get_layer(layer_name).output)
+
+# show the weights
+w = intermediate_layer_model.get_weights()
+
+#we are extracting the output of intermediate layer when we pass the one-hot-encoded version of the word as input.
+words = []
+wordVec = []
+xval = []
+yval = []
+for i in range(len(vectorizer.vocabulary_)):
+    words.append(list(vectorizer.vocabulary_.keys())[i])
+    one_hot = vectorizer.transform([list(vectorizer.vocabulary_.keys())[i]]).toarray()
+    wordVec.append(intermediate_layer_model.predict(one_hot))
+    xval.append(wordVec[i][0][0])
+    yval.append(wordVec[i][0][1])
+
+#2D plot of the wordvec
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.pyplot import figure
+
+figure(figsize=(10, 10), dpi=80)
+plt.xlabel("Dim 1", fontsize = 15)
+plt.ylabel("Dim 2",fontsize = 15)
+plt.xlim([-4, 4])
+plt.ylim([-4, 4])
+
+for i in range(len(xval)):  
+  plt.text(xval[i], yval[i], words[i], fontsize = 12)
+
+plt.plot(xval, yval,'go')
+plt.show()
+
+#Measuring similarity between word vectors
+w2c = ["movie","football"]
+word_vec_a = intermediate_layer_model.predict(vectorizer.transform([w2c[0]]).toarray())
+word_vec_b = intermediate_layer_model.predict(vectorizer.transform([w2c[1]]).toarray())
+
+#word_vec_a
+#word_vec_b
+
+#cosine similarity
+np.sum(word_vec_a*word_vec_b)/((np.sqrt(np.sum(np.square(word_vec_a))))*np.sqrt(np.sum(np.square(word_vec_b))))
+
+#The Eucledian distance between two different vectors, A and B, is calculated as follows
+np.sum(np.square(word_vec_a - word_vec_b))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
